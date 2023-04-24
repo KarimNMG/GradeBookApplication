@@ -1,3 +1,3 @@
-module github.com/KarimNMG/GradeBookApplication-LogService
+module github.com/KarimNMG/GradeBookApplication
 
 go 1.20
