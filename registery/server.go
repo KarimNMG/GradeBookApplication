@@ -8,6 +8,7 @@ import (
 	"log"
 	"net/http"
 	"sync"
+	"time"
 )
 
 const ServerPort = ":3000"
@@ -124,6 +125,47 @@ func (r *registery) remove(url string) error {
 		return fmt.Errorf("Service at url: %v not found", url)
 	}
 	return nil
+}
+
+func (r *registery) heartbeat(freq time.Duration) {
+	for {
+		var wg sync.WaitGroup
+		for _, reg := range r.registerations {
+			wg.Add(1)
+			go func(reg Registration) {
+				defer wg.Done()
+				success := true
+				for attempts := 0; attempts < 3; attempts++ {
+					res, err := http.Get(reg.HeartbeatURL)
+					if err != nil {
+						log.Println(err)
+					} else if res.StatusCode == http.StatusOK {
+						log.Println("Heartbeat OK for %v", reg.ServiceName)
+						if !success {
+							r.add(reg)
+						}
+						break
+					}
+					log.Printf("Heartbeat failed for %v", reg.ServiceName)
+					if success {
+						success = false
+						r.remove(reg.ServiceURL)
+					}
+					time.Sleep(1 * time.Second)
+				}
+			}(reg)
+			wg.Wait()
+			time.Sleep(freq)
+		}
+	}
+}
+
+var once sync.Once
+
+func SetUpRegisteryService() {
+	once.Do(func() {
+		go reg.heartbeat(3 * time.Second)
+	})
 }
 
 var reg = registery{

@@ -10,6 +10,8 @@ import (
 )
 
 func main() {
+	registery.SetUpRegisteryService()
+
 	http.Handle("/services", &registery.RegisteryService{})
 
 	ctx, cancel := context.WithCancel(context.Background())
